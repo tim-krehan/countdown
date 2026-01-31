@@ -22,6 +22,18 @@
             --accent: #0066cc;
         }
 
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html,
+        body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -32,25 +44,43 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            overflow: hidden;
             transition: background 0.4s, color 0.4s;
         }
 
         .wrapper {
             text-align: center;
-            animation: fadeIn 1s ease-out;
+            width: 100%;
+            max-width: 600px;
+            position: relative;
         }
 
         h1 {
             margin-bottom: 30px;
             font-size: 2rem;
             letter-spacing: 1px;
+            opacity: 1;
+            transition: opacity 0.4s ease;
+        }
+
+        .slide-container {
+            display: flex;
+            width: 100%;
+            transition: transform 0.45s cubic-bezier(.25, .8, .25, 1);
+        }
+
+        .slide {
+            min-width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
         }
 
         .container {
             display: flex;
             gap: 30px;
             justify-content: center;
-            animation: slideUp 0.8s ease-out;
         }
 
         .block {
@@ -77,6 +107,56 @@
             font-size: 0.9rem;
         }
 
+        /* Navigation arrows */
+        .nav-btn {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2.5rem;
+            color: var(--fg);
+            cursor: pointer;
+            padding: 10px;
+            user-select: none;
+            opacity: 0.4;
+            transition: opacity 0.3s;
+            z-index: 20;
+        }
+
+        .nav-btn:hover {
+            opacity: 1;
+        }
+
+        #prevBtn {
+            left: 20px;
+        }
+
+        #nextBtn {
+            right: 20px;
+        }
+
+        /* Pagination dots */
+        .dots {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--fg);
+            opacity: 0.3;
+            transition: opacity 0.3s, transform 0.3s;
+            cursor: pointer;
+        }
+
+        .dot.active {
+            opacity: 1;
+            transform: scale(1.3);
+        }
+
         /* Mobile stacked layout */
         @media (max-width: 600px) {
             .container {
@@ -87,30 +167,19 @@
             .value {
                 font-size: 2.5rem;
             }
-        }
 
-        /* Animations */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+            .nav-btn {
+                font-size: 2rem;
+                padding: 8px;
             }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            .swipe-hint {
+                position: fixed;
+                bottom: 20px;
+                width: 100%;
+                text-align: center;
+                opacity: 0.5;
+                font-size: 0.9rem;
             }
         }
 
@@ -135,35 +204,70 @@
 
     <button id="modeToggle">Light Mode</button>
 
+    <div id="prevBtn" class="nav-btn">&lt;</div>
+    <div id="nextBtn" class="nav-btn">&gt;</div>
+
     <div class="wrapper">
         <h1 id="title"></h1>
 
-        <div class="container">
-            <div class="block">
-                <div class="value" id="days">0</div>
-                <div class="label">Days</div>
-            </div>
-            <div class="block">
-                <div class="value" id="hours">0</div>
-                <div class="label">Hours</div>
-            </div>
-            <div class="block">
-                <div class="value" id="minutes">0</div>
-                <div class="label">Minutes</div>
-            </div>
-            <div class="block">
-                <div class="value" id="seconds">0</div>
-                <div class="label">Seconds</div>
-            </div>
-        </div>
+        <div id="slides" class="slide-container"></div>
+
+        <div class="dots" id="dots"></div>
+
+        <div class="swipe-hint">← Swipe →</div>
     </div>
 
     <script>
-        document.title = CONFIG.title;
-        document.getElementById("title").textContent = CONFIG.title;
         document.getElementById("favicon").href = CONFIG.favicon;
 
-        const targetDate = new Date(CONFIG.targetDate);
+        let index = 0;
+        const savedIndex = parseInt(getCookie("lastCountdownIndex"));
+        if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < CONFIG.countdowns.length) {
+            index = savedIndex;
+        }
+
+
+        const slides = document.getElementById("slides");
+        const dotsContainer = document.getElementById("dots");
+
+        /* Build slides dynamically */
+        CONFIG.countdowns.forEach((c, i) => {
+            const slide = document.createElement("div");
+            slide.className = "slide";
+            slide.innerHTML = `
+                <div class="container">
+                    <div class="block"><div class="value" id="days-${i}">00</div><div class="label">Days</div></div>
+                    <div class="block"><div class="value" id="hours-${i}">00</div><div class="label">Hours</div></div>
+                    <div class="block"><div class="value" id="minutes-${i}">00</div><div class="label">Minutes</div></div>
+                    <div class="block"><div class="value" id="seconds-${i}">00</div><div class="label">Seconds</div></div>
+                </div>
+            `;
+            slides.appendChild(slide);
+
+            const dot = document.createElement("div");
+            dot.className = "dot";
+            dot.onclick = () => showSlide(i);
+            dotsContainer.appendChild(dot);
+        });
+
+        const dots = [...document.querySelectorAll(".dot")];
+
+        function updateDots() {
+            dots.forEach((d, i) => d.classList.toggle("active", i === index));
+        }
+
+        function updateTitle() {
+            const titleEl = document.getElementById("title");
+            titleEl.style.opacity = 0;
+            setTimeout(() => {
+                titleEl.textContent = CONFIG.countdowns[index].title;
+                document.title = CONFIG.countdowns[index].title;
+                titleEl.style.opacity = 1;
+            }, 200);
+        }
+
+        updateTitle();
+        updateDots();
 
         /* Dark/Light mode toggle */
         const body = document.body;
@@ -181,42 +285,120 @@
             localStorage.setItem("theme", isLight ? "light" : "dark");
         };
 
-        /* Helper: pad single digits with leading zero */
         function pad(n) {
             return n.toString().padStart(2, "0");
         }
 
-        /* Timer logic */
         function animateValue(el) {
             el.classList.add("animate");
             setTimeout(() => el.classList.remove("animate"), 200);
         }
 
         function updateTimer() {
-            const now = new Date();
-            const diff = targetDate - now;
-            const abs = Math.abs(diff);
+            CONFIG.countdowns.forEach((c, i) => {
+                const targetDate = new Date(c.targetDate);
+                const now = new Date();
+                const diff = targetDate - now;
+                const abs = Math.abs(diff);
 
-            const d = Math.floor(abs / (1000 * 60 * 60 * 24));
-            const h = Math.floor(abs / (1000 * 60 * 60)) % 24;
-            const m = Math.floor(abs / (1000 * 60)) % 60;
-            const s = Math.floor(abs / 1000) % 60;
+                const d = Math.floor(abs / (1000 * 60 * 60 * 24));
+                const h = Math.floor(abs / (1000 * 60 * 60)) % 24;
+                const m = Math.floor(abs / (1000 * 60)) % 60;
+                const s = Math.floor(abs / 1000) % 60;
 
-            const ids = ["days", "hours", "minutes", "seconds"];
-            const values = [d, h, m, s];
+                const ids = ["days", "hours", "minutes", "seconds"];
+                const values = [d, h, m, s];
 
-            values.forEach((val, i) => {
-                const el = document.getElementById(ids[i]);
-                const padded = pad(val);
-                if (el.textContent !== padded) animateValue(el);
-                el.textContent = padded;
+                values.forEach((val, j) => {
+                    const el = document.getElementById(`${ids[j]}-${i}`);
+                    const padded = pad(val);
+                    if (el.textContent !== padded) animateValue(el);
+                    el.textContent = padded;
+                });
             });
         }
 
         updateTimer();
         setInterval(updateTimer, 1000);
-    </script>
 
+        /* Navigation */
+        function showSlide(i) {
+            index = (i + CONFIG.countdowns.length) % CONFIG.countdowns.length;
+
+            // Save to cookie
+            setCookie("lastCountdownIndex", index);
+
+            slides.style.transform = `translateX(-${index * 100}%)`;
+            updateTitle();
+            updateDots();
+        }
+
+
+        document.getElementById("prevBtn").onclick = () => showSlide(index - 1);
+        document.getElementById("nextBtn").onclick = () => showSlide(index + 1);
+
+        /* Swipe gestures (touch + mouse) with momentum */
+        let startX = 0;
+        let startTime = 0;
+        let isDragging = false;
+
+        function handleSwipe(endX) {
+            const diff = endX - startX;
+            const time = Date.now() - startTime;
+            const velocity = Math.abs(diff) / time;
+
+            const fast = velocity > 0.4;
+            const far = Math.abs(diff) > 60;
+
+            if (fast || far) {
+                if (diff < 0) showSlide(index + 1);
+                else showSlide(index - 1);
+            }
+        }
+
+        slides.addEventListener("touchstart", e => {
+            startX = e.touches[0].clientX;
+            startTime = Date.now();
+        });
+
+        slides.addEventListener("touchend", e => {
+            handleSwipe(e.changedTouches[0].clientX);
+        });
+
+        slides.addEventListener("mousedown", e => {
+            isDragging = true;
+            startX = e.clientX;
+            startTime = Date.now();
+        });
+
+        slides.addEventListener("mouseup", e => {
+            if (!isDragging) return;
+            isDragging = false;
+            handleSwipe(e.clientX);
+        });
+
+        slides.addEventListener("mouseleave", () => {
+            isDragging = false;
+        });
+
+        /* Hide swipe hint if only one countdown */
+        if (CONFIG.countdowns.length <= 1) {
+            document.querySelector(".swipe-hint").style.display = "none";
+        }
+
+        function setCookie(name, value, days = 365) {
+            const expires = new Date(Date.now() + days * 864e5).toUTCString();
+            document.cookie = `${name}=${value}; expires=${expires}; path=/`;
+        }
+
+        function getCookie(name) {
+            return document.cookie
+                .split("; ")
+                .find(row => row.startsWith(name + "="))
+                ?.split("=")[1];
+        }
+
+    </script>
 
 </body>
 
