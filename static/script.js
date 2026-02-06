@@ -1,11 +1,19 @@
 document.getElementById("favicon").href = CONFIG.favicon;
 
+/* --- Read GET parameter ?countdown=INDEX --- */
+const params = new URLSearchParams(window.location.search);
+const paramIndex = parseInt(params.get("countdown"));
+
 let index = 0;
+
+/* Cookie fallback */
 const savedIndex = parseInt(getCookie("lastCountdownIndex"));
-if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < CONFIG.countdowns.length) {
+
+if (!isNaN(paramIndex) && paramIndex >= 0 && paramIndex < CONFIG.countdowns.length) {
+    index = paramIndex;
+} else if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < CONFIG.countdowns.length) {
     index = savedIndex;
 }
-
 
 const slides = document.getElementById("slides");
 const dotsContainer = document.getElementById("dots");
@@ -32,10 +40,7 @@ CONFIG.countdowns.forEach((c, i) => {
 
 const dots = [...document.querySelectorAll(".dot")];
 
-function updateDots() {
-    dots.forEach((d, i) => d.classList.toggle("active", i === index));
-}
-
+/* Title update with fade */
 function updateTitle() {
     const titleEl = document.getElementById("title");
     titleEl.style.opacity = 0;
@@ -44,6 +49,10 @@ function updateTitle() {
         document.title = CONFIG.countdowns[index].title;
         titleEl.style.opacity = 1;
     }, 200);
+}
+
+function updateDots() {
+    dots.forEach((d, i) => d.classList.toggle("active", i === index));
 }
 
 updateTitle();
@@ -105,7 +114,6 @@ setInterval(updateTimer, 1000);
 function showSlide(i) {
     index = (i + CONFIG.countdowns.length) % CONFIG.countdowns.length;
 
-    // Save to cookie
     setCookie("lastCountdownIndex", index);
 
     slides.style.transform = `translateX(-${index * 100}%)`;
@@ -113,11 +121,10 @@ function showSlide(i) {
     updateDots();
 }
 
-
 document.getElementById("prevBtn").onclick = () => showSlide(index - 1);
 document.getElementById("nextBtn").onclick = () => showSlide(index + 1);
 
-/* Swipe gestures (touch + mouse) with momentum */
+/* Swipe gestures */
 let startX = 0;
 let startTime = 0;
 let isDragging = false;
@@ -161,11 +168,13 @@ slides.addEventListener("mouseleave", () => {
     isDragging = false;
 });
 
-/* Hide swipe hint if only one countdown */
+/* Swipe hint visibility */
+const swipeHint = document.getElementById("swipeHint");
 if (CONFIG.countdowns.length <= 1) {
-    document.querySelector(".swipe-hint").style.display = "none";
+    swipeHint.style.display = "none";
 }
 
+/* Cookies */
 function setCookie(name, value, days = 365) {
     const expires = new Date(Date.now() + days * 864e5).toUTCString();
     document.cookie = `${name}=${value}; expires=${expires}; path=/`;
@@ -178,3 +187,5 @@ function getCookie(name) {
         ?.split("=")[1];
 }
 
+/* Ensure initial slide position */
+slides.style.transform = `translateX(-${index * 100}%)`;
