@@ -36,6 +36,27 @@ body {
     transition: background 0.4s, color 0.4s;
 }
 
+/* Top-right button cluster */
+.top-buttons {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 30;
+}
+
+.top-buttons button {
+    background: var(--accent);
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
 .wrapper {
     text-align: center;
     width: 100%;
@@ -169,6 +190,26 @@ h1 {
     width: max-content;
 }
 
+/* Toast */
+#toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    font-weight: bold;
+}
+
+#toast.show {
+    opacity: 1;
+}
+
 /* Mobile stacked layout */
 @media (max-width: 600px) {
     .container {
@@ -184,19 +225,4 @@ h1 {
         font-size: 2rem;
         padding: 8px;
     }
-}
-
-/* Toggle button */
-#modeToggle {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: var(--accent);
-    border: none;
-    padding: 10px 18px;
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background 0.3s;
 }

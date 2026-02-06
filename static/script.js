@@ -50,7 +50,7 @@ function updateDots() {
     dots.forEach((d, i) => d.classList.toggle("active", i === index));
 }
 
-/* Update URL without reloading */
+/* Update URL without reload */
 function updateURL() {
     const newURL = `?countdown=${index}`;
     history.replaceState(null, "", newURL);
@@ -75,6 +75,33 @@ toggleBtn.onclick = () => {
     toggleBtn.textContent = isLight ? "Dark Mode" : "Light Mode";
     localStorage.setItem("theme", isLight ? "light" : "dark");
 };
+
+/* Share button */
+const shareBtn = document.getElementById("shareBtn");
+const toast = document.getElementById("toast");
+
+shareBtn.onclick = async () => {
+    const url = window.location.href;
+
+    try {
+        await navigator.clipboard.writeText(url);
+        showToast();
+    } catch {
+        // fallback
+        const textarea = document.createElement("textarea");
+        textarea.value = url;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+        showToast();
+    }
+};
+
+function showToast() {
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 1500);
+}
 
 function pad(n) {
     return n.toString().padStart(2, "0");
