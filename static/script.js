@@ -6,13 +6,8 @@ const paramIndex = parseInt(params.get("countdown"));
 
 let index = 0;
 
-/* Cookie fallback */
-const savedIndex = parseInt(getCookie("lastCountdownIndex"));
-
 if (!isNaN(paramIndex) && paramIndex >= 0 && paramIndex < CONFIG.countdowns.length) {
     index = paramIndex;
-} else if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < CONFIG.countdowns.length) {
-    index = savedIndex;
 }
 
 const slides = document.getElementById("slides");
@@ -55,8 +50,15 @@ function updateDots() {
     dots.forEach((d, i) => d.classList.toggle("active", i === index));
 }
 
+/* Update URL without reloading */
+function updateURL() {
+    const newURL = `?countdown=${index}`;
+    history.replaceState(null, "", newURL);
+}
+
 updateTitle();
 updateDots();
+updateURL();
 
 /* Dark/Light mode toggle */
 const body = document.body;
@@ -114,11 +116,10 @@ setInterval(updateTimer, 1000);
 function showSlide(i) {
     index = (i + CONFIG.countdowns.length) % CONFIG.countdowns.length;
 
-    setCookie("lastCountdownIndex", index);
-
     slides.style.transform = `translateX(-${index * 100}%)`;
     updateTitle();
     updateDots();
+    updateURL();
 }
 
 document.getElementById("prevBtn").onclick = () => showSlide(index - 1);
@@ -172,19 +173,6 @@ slides.addEventListener("mouseleave", () => {
 const swipeHint = document.getElementById("swipeHint");
 if (CONFIG.countdowns.length <= 1) {
     swipeHint.style.display = "none";
-}
-
-/* Cookies */
-function setCookie(name, value, days = 365) {
-    const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${name}=${value}; expires=${expires}; path=/`;
-}
-
-function getCookie(name) {
-    return document.cookie
-        .split("; ")
-        .find(row => row.startsWith(name + "="))
-        ?.split("=")[1];
 }
 
 /* Ensure initial slide position */
