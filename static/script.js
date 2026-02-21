@@ -8,9 +8,9 @@ function slugify(title) {
         .replace(/^-+|-+$/g, "");
 }
 
-function parseDMY(dmy) {
-    const [d, m, y] = dmy.split(".");
-    return new Date(Number(y), Number(m) - 1, Number(d));
+/* Updated: parse ISO date directly from config */
+function parseDate(str) {
+    return new Date(str);
 }
 
 /* --- Read GET parameter ?countdown=SLUG or INDEX --- */
@@ -110,7 +110,6 @@ shareBtn.onclick = async () => {
         await navigator.clipboard.writeText(url);
         showToast();
     } catch {
-        // fallback
         const textarea = document.createElement("textarea");
         textarea.value = url;
         document.body.appendChild(textarea);
@@ -139,7 +138,7 @@ function animateValue(el) {
 
 function updateTimer() {
     CONFIG.countdowns.forEach((c, i) => {
-        const targetDate = parseDMY(c.targetDate);
+        const targetDate = parseDate(c.targetDate);
         const now = new Date();
         const diff = targetDate - now;
         const abs = Math.abs(diff);
