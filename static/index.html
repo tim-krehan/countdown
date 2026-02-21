@@ -25,8 +25,12 @@
 
         <div id="slides" class="slide-container"></div>
 
-        <div class="progress">
-            <div id="progressBar"></div>
+        <div class="progress-wrapper" id="progressWrapper">
+            <span id="progressStart"></span>
+            <div class="progress">
+                <div id="progressBar"></div>
+            </div>
+            <span id="progressPct"></span>
         </div>
 
         <div class="dots" id="dots"></div>
@@ -46,7 +50,6 @@
         };
         document.head.appendChild(cfg);
     </script>
-
 
 </body>
 

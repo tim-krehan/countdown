@@ -1,6 +1,5 @@
 document.getElementById("favicon").href = CONFIG.favicon;
 
-/* --- Helpers --- */
 function slugify(title) {
     return title
         .toLowerCase()
@@ -8,12 +7,10 @@ function slugify(title) {
         .replace(/^-+|-+$/g, "");
 }
 
-/* Updated: parse ISO date directly from config */
 function parseDate(str) {
     return new Date(str);
 }
 
-/* --- Read GET parameter ?countdown=SLUG or INDEX --- */
 const params = new URLSearchParams(window.location.search);
 const param = params.get("countdown");
 
@@ -33,9 +30,11 @@ if (param !== null) {
 
 const slides = document.getElementById("slides");
 const dotsContainer = document.getElementById("dots");
+const progressWrapper = document.getElementById("progressWrapper");
+const progressStart = document.getElementById("progressStart");
+const progressPct = document.getElementById("progressPct");
 const progressBar = document.getElementById("progressBar");
 
-/* Build slides dynamically */
 CONFIG.countdowns.forEach((c, i) => {
     const slide = document.createElement("div");
     slide.className = "slide";
@@ -58,7 +57,6 @@ CONFIG.countdowns.forEach((c, i) => {
 
 const dots = [...document.querySelectorAll(".dot")];
 
-/* Title update with fade */
 function updateTitle() {
     const titleEl = document.getElementById("title");
     titleEl.style.opacity = 0;
@@ -73,19 +71,16 @@ function updateDots() {
     dots.forEach((d, i) => d.classList.toggle("active", i === index));
 }
 
-/* Update URL without reload — slug now includes emojis */
 function updateURL() {
     const slug = slugify(CONFIG.countdowns[index].title);
     const newURL = `?countdown=${slug}`;
     history.replaceState(null, "", newURL);
 }
 
-
 updateTitle();
 updateDots();
 updateURL();
 
-/* Dark/Light mode toggle */
 const body = document.body;
 const toggleBtn = document.getElementById("modeToggle");
 
@@ -101,7 +96,6 @@ toggleBtn.onclick = () => {
     localStorage.setItem("theme", isLight ? "light" : "dark");
 };
 
-/* Auto-advance toggle */
 const autoToggle = document.getElementById("autoToggle");
 let autoAdvance = false;
 let autoTimer = null;
@@ -124,7 +118,6 @@ autoToggle.onclick = () => {
     setAutoAdvance(!autoAdvance);
 };
 
-/* Share button */
 const shareBtn = document.getElementById("shareBtn");
 const toast = document.getElementById("toast");
 
@@ -210,9 +203,13 @@ function updateTimer() {
                 const total = targetDate - yearStart;
                 const elapsed = now - yearStart;
                 const pct = clamp((elapsed / total) * 100, 0, 100);
+
+                progressWrapper.style.display = "flex";
                 progressBar.style.width = `${pct}%`;
+                progressStart.textContent = yearStart.toISOString().split("T")[0];
+                progressPct.textContent = `${pct.toFixed(1)}%`;
             } else {
-                progressBar.style.width = "0%";
+                progressWrapper.style.display = "none";
             }
         }
     });
@@ -221,7 +218,6 @@ function updateTimer() {
 updateTimer();
 setInterval(updateTimer, 1000);
 
-/* Swipe hint visibility */
 const swipeHint = document.getElementById("swipeHint");
 if (CONFIG.countdowns.length <= 1) {
     swipeHint.style.display = "none";
@@ -232,7 +228,6 @@ function hideSwipeHint() {
     swipeHint.classList.add("hidden");
 }
 
-/* Navigation */
 function showSlide(i) {
     index = (i + CONFIG.countdowns.length) % CONFIG.countdowns.length;
 
@@ -247,17 +242,17 @@ function showSlide(i) {
 document.getElementById("prevBtn").onclick = () => showSlide(index - 1);
 document.getElementById("nextBtn").onclick = () => showSlide(index + 1);
 
-/* Keyboard navigation */
 document.addEventListener("keydown", e => {
     if (e.key === "ArrowLeft") {
         showSlide(index - 1);
+        hideSwipeHint();
     }
     if (e.key === "ArrowRight") {
         showSlide(index + 1);
+        hideSwipeHint();
     }
 });
 
-/* Swipe gestures */
 let startX = 0;
 let startTime = 0;
 let isDragging = false;
@@ -283,6 +278,8 @@ function handleSwipe(endX) {
         slides.style.transition = "transform 0.45s cubic-bezier(.25, .8, .25, 1)";
         slides.style.transform = `translateX(-${index * 100}%)`;
     }
+
+    hideSwipeHint();
 }
 
 slides.addEventListener("touchstart", e => {
@@ -332,7 +329,6 @@ slides.addEventListener("mouseleave", () => {
     slides.style.transform = `translateX(-${index * 100}%)`;
 });
 
-/* Mouse wheel navigation */
 let wheelLock = false;
 slides.addEventListener("wheel", e => {
     e.preventDefault();
@@ -350,5 +346,4 @@ slides.addEventListener("wheel", e => {
     }, 400);
 }, { passive: false });
 
-/* Ensure initial slide position */
 slides.style.transform = `translateX(-${index * 100}%)`;
