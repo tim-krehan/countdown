@@ -1,13 +1,34 @@
 document.getElementById("favicon").href = CONFIG.favicon;
 
-/* --- Read GET parameter ?countdown=INDEX --- */
+/* --- Helpers --- */
+function slugify(title) {
+    return title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+}
+
+function parseDMY(dmy) {
+    const [d, m, y] = dmy.split(".");
+    return new Date(Number(y), Number(m) - 1, Number(d));
+}
+
+/* --- Read GET parameter ?countdown=SLUG or INDEX --- */
 const params = new URLSearchParams(window.location.search);
-const paramIndex = parseInt(params.get("countdown"));
+const param = params.get("countdown");
 
 let index = 0;
 
-if (!isNaN(paramIndex) && paramIndex >= 0 && paramIndex < CONFIG.countdowns.length) {
-    index = paramIndex;
+if (param !== null) {
+    const numeric = parseInt(param, 10);
+    if (!isNaN(numeric) && numeric >= 0 && numeric < CONFIG.countdowns.length) {
+        index = numeric;
+    } else {
+        const found = CONFIG.countdowns.findIndex(c => slugify(c.title) === param);
+        if (found !== -1) {
+            index = found;
+        }
+    }
 }
 
 const slides = document.getElementById("slides");
@@ -24,6 +45,7 @@ CONFIG.countdowns.forEach((c, i) => {
             <div class="block"><div class="value" id="minutes-${i}">00</div><div class="label">Minutes</div></div>
             <div class="block"><div class="value" id="seconds-${i}">00</div><div class="label">Seconds</div></div>
         </div>
+        <div class="hint" id="hint-${i}"></div>
     `;
     slides.appendChild(slide);
 
@@ -52,7 +74,8 @@ function updateDots() {
 
 /* Update URL without reload */
 function updateURL() {
-    const newURL = `?countdown=${index}`;
+    const slug = slugify(CONFIG.countdowns[index].title);
+    const newURL = `?countdown=${slug}`;
     history.replaceState(null, "", newURL);
 }
 
@@ -108,13 +131,15 @@ function pad(n) {
 }
 
 function animateValue(el) {
+    el.classList.remove("animate");
+    void el.offsetWidth;
     el.classList.add("animate");
     setTimeout(() => el.classList.remove("animate"), 200);
 }
 
 function updateTimer() {
     CONFIG.countdowns.forEach((c, i) => {
-        const targetDate = new Date(c.targetDate);
+        const targetDate = parseDMY(c.targetDate);
         const now = new Date();
         const diff = targetDate - now;
         const abs = Math.abs(diff);
@@ -133,6 +158,15 @@ function updateTimer() {
             if (el.textContent !== padded) animateValue(el);
             el.textContent = padded;
         });
+
+        const hintEl = document.getElementById(`hint-${i}`);
+        if (hintEl) {
+            if (diff < 0) {
+                hintEl.textContent = `This was ${d}d ${h}h ${m}m ${s}s ago`;
+            } else {
+                hintEl.textContent = "";
+            }
+        }
     });
 }
 
@@ -143,6 +177,7 @@ setInterval(updateTimer, 1000);
 function showSlide(i) {
     index = (i + CONFIG.countdowns.length) % CONFIG.countdowns.length;
 
+    slides.style.transition = "";
     slides.style.transform = `translateX(-${index * 100}%)`;
     updateTitle();
     updateDots();
@@ -168,15 +203,30 @@ function handleSwipe(endX) {
     if (fast || far) {
         if (diff < 0) showSlide(index + 1);
         else showSlide(index - 1);
+    } else {
+        slides.style.transition = "";
+        slides.style.transform = `translateX(-${index * 100}%)`;
     }
 }
 
 slides.addEventListener("touchstart", e => {
+    isDragging = true;
     startX = e.touches[0].clientX;
     startTime = Date.now();
+    slides.style.transition = "none";
+});
+
+slides.addEventListener("touchmove", e => {
+    if (!isDragging) return;
+    const currentX = e.touches[0].clientX;
+    const dx = currentX - startX;
+    slides.style.transform = `translateX(calc(-${index * 100}% + ${dx}px))`;
 });
 
 slides.addEventListener("touchend", e => {
+    if (!isDragging) return;
+    isDragging = false;
+    slides.style.transition = "";
     handleSwipe(e.changedTouches[0].clientX);
 });
 
@@ -184,17 +234,47 @@ slides.addEventListener("mousedown", e => {
     isDragging = true;
     startX = e.clientX;
     startTime = Date.now();
+    slides.style.transition = "none";
+});
+
+slides.addEventListener("mousemove", e => {
+    if (!isDragging) return;
+    const currentX = e.clientX;
+    const dx = currentX - startX;
+    slides.style.transform = `translateX(calc(-${index * 100}% + ${dx}px))`;
 });
 
 slides.addEventListener("mouseup", e => {
     if (!isDragging) return;
     isDragging = false;
+    slides.style.transition = "";
     handleSwipe(e.clientX);
 });
 
 slides.addEventListener("mouseleave", () => {
+    if (!isDragging) return;
     isDragging = false;
+    slides.style.transition = "";
+    slides.style.transform = `translateX(-${index * 100}%)`;
 });
+
+/* Mouse wheel navigation */
+let wheelLock = false;
+slides.addEventListener("wheel", e => {
+    e.preventDefault();
+    if (wheelLock) return;
+    wheelLock = true;
+
+    if (e.deltaY > 0) {
+        showSlide(index + 1);
+    } else if (e.deltaY < 0) {
+        showSlide(index - 1);
+    }
+
+    setTimeout(() => {
+        wheelLock = false;
+    }, 400);
+}, { passive: false });
 
 /* Swipe hint visibility */
 const swipeHint = document.getElementById("swipeHint");
