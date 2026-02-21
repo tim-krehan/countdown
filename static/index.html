@@ -13,16 +13,21 @@
 
     <div class="top-buttons">
         <button id="modeToggle">Light Mode</button>
+        <button id="autoToggle">Auto ▶️</button>
         <button id="shareBtn">Share 🔗</button>
     </div>
 
-    <div id="prevBtn" class="nav-btn">&lt;</div>
-    <div id="nextBtn" class="nav-btn">&gt;</div>
+    <div id="prevBtn" class="nav-btn" aria-label="Previous countdown">&lt;</div>
+    <div id="nextBtn" class="nav-btn" aria-label="Next countdown">&gt;</div>
 
     <div class="wrapper">
         <h1 id="title"></h1>
 
         <div id="slides" class="slide-container"></div>
+
+        <div class="progress">
+            <div id="progressBar"></div>
+        </div>
 
         <div class="dots" id="dots"></div>
 

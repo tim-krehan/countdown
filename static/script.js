@@ -33,6 +33,7 @@ if (param !== null) {
 
 const slides = document.getElementById("slides");
 const dotsContainer = document.getElementById("dots");
+const progressBar = document.getElementById("progressBar");
 
 /* Build slides dynamically */
 CONFIG.countdowns.forEach((c, i) => {
@@ -75,10 +76,10 @@ function updateDots() {
 /* Update URL without reload — slug now includes emojis */
 function updateURL() {
     const slug = slugify(CONFIG.countdowns[index].title);
-    const encoded = encodeURIComponent(CONFIG.countdowns[index].title);
-    const newURL = `?countdown=${slug}&title=${encoded}`;
+    const newURL = `?countdown=${slug}`;
     history.replaceState(null, "", newURL);
 }
+
 
 updateTitle();
 updateDots();
@@ -98,6 +99,29 @@ toggleBtn.onclick = () => {
     const isLight = body.classList.contains("light");
     toggleBtn.textContent = isLight ? "Dark Mode" : "Light Mode";
     localStorage.setItem("theme", isLight ? "light" : "dark");
+};
+
+/* Auto-advance toggle */
+const autoToggle = document.getElementById("autoToggle");
+let autoAdvance = false;
+let autoTimer = null;
+
+function setAutoAdvance(on) {
+    autoAdvance = on;
+    autoToggle.textContent = autoAdvance ? "Auto ⏸" : "Auto ▶️";
+    if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+    }
+    if (autoAdvance) {
+        autoTimer = setInterval(() => {
+            showSlide(index + 1);
+        }, 10000);
+    }
+}
+
+autoToggle.onclick = () => {
+    setAutoAdvance(!autoAdvance);
 };
 
 /* Share button */
@@ -137,10 +161,15 @@ function animateValue(el) {
     setTimeout(() => el.classList.remove("animate"), 200);
 }
 
+function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+}
+
 function updateTimer() {
+    const now = new Date();
+
     CONFIG.countdowns.forEach((c, i) => {
         const targetDate = parseDate(c.targetDate);
-        const now = new Date();
         const diff = targetDate - now;
         const abs = Math.abs(diff);
 
@@ -161,10 +190,29 @@ function updateTimer() {
 
         const hintEl = document.getElementById(`hint-${i}`);
         if (hintEl) {
-            if (diff < 0) {
+            const sameDay =
+                now.getFullYear() === targetDate.getFullYear() &&
+                now.getMonth() === targetDate.getMonth() &&
+                now.getDate() === targetDate.getDate();
+
+            if (sameDay) {
+                hintEl.textContent = "Today 🎉";
+            } else if (diff < 0) {
                 hintEl.textContent = "(ago)";
             } else {
                 hintEl.textContent = "";
+            }
+        }
+
+        if (i === index) {
+            if (diff > 0) {
+                const yearStart = new Date(targetDate.getFullYear(), 0, 1);
+                const total = targetDate - yearStart;
+                const elapsed = now - yearStart;
+                const pct = clamp((elapsed / total) * 100, 0, 100);
+                progressBar.style.width = `${pct}%`;
+            } else {
+                progressBar.style.width = "0%";
             }
         }
     });
@@ -173,15 +221,27 @@ function updateTimer() {
 updateTimer();
 setInterval(updateTimer, 1000);
 
+/* Swipe hint visibility */
+const swipeHint = document.getElementById("swipeHint");
+if (CONFIG.countdowns.length <= 1) {
+    swipeHint.style.display = "none";
+}
+
+function hideSwipeHint() {
+    if (!swipeHint) return;
+    swipeHint.classList.add("hidden");
+}
+
 /* Navigation */
 function showSlide(i) {
     index = (i + CONFIG.countdowns.length) % CONFIG.countdowns.length;
 
-    slides.style.transition = "";
+    slides.style.transition = "transform 0.45s cubic-bezier(.25, .8, .25, 1)";
     slides.style.transform = `translateX(-${index * 100}%)`;
     updateTitle();
     updateDots();
     updateURL();
+    hideSwipeHint();
 }
 
 document.getElementById("prevBtn").onclick = () => showSlide(index - 1);
@@ -189,8 +249,12 @@ document.getElementById("nextBtn").onclick = () => showSlide(index + 1);
 
 /* Keyboard navigation */
 document.addEventListener("keydown", e => {
-    if (e.key === "ArrowLeft") showSlide(index - 1);
-    if (e.key === "ArrowRight") showSlide(index + 1);
+    if (e.key === "ArrowLeft") {
+        showSlide(index - 1);
+    }
+    if (e.key === "ArrowRight") {
+        showSlide(index + 1);
+    }
 });
 
 /* Swipe gestures */
@@ -207,10 +271,16 @@ function handleSwipe(endX) {
     const far = Math.abs(diff) > 60;
 
     if (fast || far) {
-        if (diff < 0) showSlide(index + 1);
-        else showSlide(index - 1);
+        if (diff < 0) {
+            showSlide(index + 1);
+        } else {
+            showSlide(index - 1);
+        }
+        if (navigator.vibrate) {
+            navigator.vibrate(15);
+        }
     } else {
-        slides.style.transition = "";
+        slides.style.transition = "transform 0.45s cubic-bezier(.25, .8, .25, 1)";
         slides.style.transform = `translateX(-${index * 100}%)`;
     }
 }
@@ -232,7 +302,6 @@ slides.addEventListener("touchmove", e => {
 slides.addEventListener("touchend", e => {
     if (!isDragging) return;
     isDragging = false;
-    slides.style.transition = "";
     handleSwipe(e.changedTouches[0].clientX);
 });
 
@@ -253,14 +322,13 @@ slides.addEventListener("mousemove", e => {
 slides.addEventListener("mouseup", e => {
     if (!isDragging) return;
     isDragging = false;
-    slides.style.transition = "";
     handleSwipe(e.clientX);
 });
 
 slides.addEventListener("mouseleave", () => {
     if (!isDragging) return;
     isDragging = false;
-    slides.style.transition = "";
+    slides.style.transition = "transform 0.45s cubic-bezier(.25, .8, .25, 1)";
     slides.style.transform = `translateX(-${index * 100}%)`;
 });
 
@@ -281,12 +349,6 @@ slides.addEventListener("wheel", e => {
         wheelLock = false;
     }, 400);
 }, { passive: false });
-
-/* Swipe hint visibility */
-const swipeHint = document.getElementById("swipeHint");
-if (CONFIG.countdowns.length <= 1) {
-    swipeHint.style.display = "none";
-}
 
 /* Ensure initial slide position */
 slides.style.transform = `translateX(-${index * 100}%)`;
