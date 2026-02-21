@@ -2,16 +2,20 @@ const CONFIG = {
     "favicon": "favicon.ico",
     "countdowns": [
         {
-            "title": "2026 New Year",
-            "targetDate": "01.01.2026",
+            "title": "2025 New Years",
+            "targetDate": "2025-01-01T00:00:00Z",
         },
         {
-            "title": "2027 New Year",
-            "targetDate": "01.01.2027",
+            "title": "2026 New Years",
+            "targetDate": "2026-01-01T00:00:00Z",
         },
         {
-            "title": "2028 New Year",
-            "targetDate": "01.01.2028",
+            "title": "2027 New Years",
+            "targetDate": "2027-01-01T00:00:00Z",
+        },
+        {
+            "title": "2028 New Years",
+            "targetDate": "2028-01-01T00:00:00Z",
         }
     ]
 };
