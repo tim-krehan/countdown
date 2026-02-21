@@ -4,7 +4,7 @@ document.getElementById("favicon").href = CONFIG.favicon;
 function slugify(title) {
     return title
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/[^a-z0-9\p{Emoji}\p{Extended_Pictographic}]+/gu, "-")
         .replace(/^-+|-+$/g, "");
 }
 
@@ -72,10 +72,11 @@ function updateDots() {
     dots.forEach((d, i) => d.classList.toggle("active", i === index));
 }
 
-/* Update URL without reload */
+/* Update URL without reload — slug now includes emojis */
 function updateURL() {
     const slug = slugify(CONFIG.countdowns[index].title);
-    const newURL = `?countdown=${slug}`;
+    const encoded = encodeURIComponent(CONFIG.countdowns[index].title);
+    const newURL = `?countdown=${slug}&title=${encoded}`;
     history.replaceState(null, "", newURL);
 }
 
@@ -161,7 +162,7 @@ function updateTimer() {
         const hintEl = document.getElementById(`hint-${i}`);
         if (hintEl) {
             if (diff < 0) {
-                hintEl.textContent = `This was ${d}d ${h}h ${m}m ${s}s ago`;
+                hintEl.textContent = "(ago)";
             } else {
                 hintEl.textContent = "";
             }
@@ -185,6 +186,12 @@ function showSlide(i) {
 
 document.getElementById("prevBtn").onclick = () => showSlide(index - 1);
 document.getElementById("nextBtn").onclick = () => showSlide(index + 1);
+
+/* Keyboard navigation */
+document.addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft") showSlide(index - 1);
+    if (e.key === "ArrowRight") showSlide(index + 1);
+});
 
 /* Swipe gestures */
 let startX = 0;
